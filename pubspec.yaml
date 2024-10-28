@@ -1,0 +1,23 @@
+name: video_player_flutter
+description: "A new Flutter project."
+publish_to: "none"
+version: 0.1.0
+
+environment:
+  sdk: ^3.5.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  animate_do: ^3.3.4
+  flutter_lints: ^4.0.0
+  flutter_test:
+    sdk: flutter
+  video_player: ^2.9.2
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
