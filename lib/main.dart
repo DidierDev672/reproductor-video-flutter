@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:video_player_flutter/VideoGalleryScreen.dart';
-import 'package:video_player_flutter/theme/AppTheme.dart';
+import 'package:video_player_flutter/services/isar_service.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await IsarService().openDB();
   runApp(const MainApp());
 }
 

@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.example.video_player_flutter"
-    compileSdk = flutter.compileSdkVersion
+    compileSdkVersion = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
     buildToolsVersion "33.0.0"
 

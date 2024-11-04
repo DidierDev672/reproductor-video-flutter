@@ -30,7 +30,6 @@ class _CustomVideoPlayerScreenState extends State<CustomVideoPlayerScreen> {
   Timer? _hideTimer;
   bool _isDisposed = false;
   bool _isInitialized = false;
-  int _currentQualityIndex = 0;
   Duration _position = Duration.zero;
 
   @override
@@ -63,31 +62,6 @@ class _CustomVideoPlayerScreenState extends State<CustomVideoPlayerScreen> {
     setState(() {
       _position = _controller.value.position;
     });
-  }
-
-  void _changeQuality(int index) async {
-    if (index == _currentQualityIndex) return;
-
-    _position = _controller.value.position;
-    _isPlaying = _controller.value.isPlaying;
-
-    await _controller.pause();
-    await _controller.dispose();
-
-    setState(() {
-      _currentQualityIndex = index;
-    });
-
-    _controller = VideoPlayerController.asset(widget.videoAsset)
-      ..initialize().then((_) {
-        _controller.seekTo(_position);
-        if (_isPlaying) {
-          _controller.play();
-        }
-        setState(() {});
-      });
-
-    _controller.addListener(_videoListener);
   }
 
   void _playPause() {
@@ -198,15 +172,22 @@ class _CustomVideoPlayerScreenState extends State<CustomVideoPlayerScreen> {
           child: Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 ElasticInDown(
                   child: AppBar(
+                    foregroundColor: Colors.white,
+                    automaticallyImplyLeading: true,
                     backgroundColor: Colors.transparent,
                     elevation: 0,
-                    title: const Text('Video Player'),
+                    title: const Text(
+                      'Video Player',
+                      style: TextStyle(color: Colors.white),
+                    ),
                     centerTitle: true,
                   ),
                 ),
+                const SizedBox(height: 80),
                 Center(
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -278,6 +259,224 @@ class _CustomVideoPlayerScreenState extends State<CustomVideoPlayerScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildControlButton({
+    required IconData icon,
+    required double size,
+    required VoidCallback onPressed,
+    bool isLandscape = false,
+  }) {
+    return FadeIn(
+      duration: const Duration(milliseconds: 300),
+      child: Stack(
+        children: [
+          // Gradiente superior
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.7),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Gradiente inferior
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 150,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [
+                    Colors.black.withOpacity(0.7),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Controles principales
+          Column(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            // Barra superior
+            ElasticInDown(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const Text(
+                      'Video Player',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.settings,
+                        color: Colors.white,
+                      ),
+                      onPressed: () {
+                        // Implementar menú de configuración.
+                      },
+                    )
+                  ],
+                ),
+              ),
+            ),
+
+            // Controles centrales
+            Center(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  _buildControlButton(
+                    icon: Icons.replay_10,
+                    size: 36,
+                    onPressed: () => _seekRelative(
+                      const Duration(seconds: -10),
+                    ),
+                  ),
+                  const SizedBox(width: 32),
+                  _buildPlayPauseButton(),
+                  const SizedBox(width: 32),
+                  _buildControlButton(
+                    icon: Icons.forward_10,
+                    size: 36,
+                    onPressed: () => _seekRelative(const Duration(seconds: 10)),
+                  )
+                ],
+              ),
+            ),
+
+            // Controles inferiores
+            ElasticInUp(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: CustomVideoProgressBar(
+                      controller: _controller,
+                      onSeek: (duration) {
+                        _controller.seekTo(duration);
+                        _startHideTimer();
+                      },
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildVolumeControl(),
+                        Row(
+                          children: [
+                            _buildQualityButton(),
+                            const SizedBox(width: 16),
+                            _buildFullScreenButton(isLandscape),
+                          ],
+                        ),
+                      ],
+                    ),
+                  )
+                ],
+              ),
+            )
+          ]),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlayPauseButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(50),
+        onTap: () {
+          _playPause();
+          _startHideTimer();
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            color: Colors.white24,
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            _isPlaying ? Icons.pause : Icons.play_arrow,
+            color: Colors.white,
+            size: 48,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVolumeControl() {
+    return Row(children: [
+      const Icon(
+        Icons.volume_up,
+        color: Colors.white,
+        size: 24,
+      ),
+      const SizedBox(width: 8),
+      SizedBox(
+        width: 100,
+        child: Slider(
+          value: _controller.value.volume,
+          onChanged: (value) {
+            setState(() {
+              _controller.setVolume(value);
+            });
+          },
+          activeColor: Colors.red,
+          inactiveColor: Colors.white30,
+        ),
+      )
+    ]);
+  }
+
+  Widget _buildQualityButton() {
+    return _buildControlButton(
+      icon: Icons.hd,
+      size: 24,
+      onPressed: () {},
+    );
+  }
+
+  Widget _buildFullScreenButton(bool isLandscape) {
+    return _buildControlButton(
+      icon: isLandscape ? Icons.fullscreen_exit : Icons.fullscreen,
+      size: 36,
+      onPressed: _toggleFullScreen,
     );
   }
 

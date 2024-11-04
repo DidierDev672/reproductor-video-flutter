@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:video_player_flutter/VideoCard.dart';
+import 'package:video_player_flutter/services/isar_service.dart';
 
 class VideoGalleryScreen extends StatefulWidget {
   const VideoGalleryScreen({super.key});
@@ -11,6 +12,7 @@ class VideoGalleryScreen extends StatefulWidget {
 }
 
 class _VideoGalleryScreenState extends State<VideoGalleryScreen> {
+  final IsarService _isarService = IsarService();
   //! Lista e URL de videosUrls
   final List<String> videoUrls = [
     'assets/4_Tipso_Steam_and_Froth_The_Perfect_milk_for_Latte_Art.mp4',
@@ -24,6 +26,8 @@ class _VideoGalleryScreenState extends State<VideoGalleryScreen> {
     'assets/MatchaLatteArtAesthetic.mp4',
     'assets/MovementsyouNeedforLatteArt.mp4',
     'assets/ThishastoSTOPWooting80ETeaser.mp4',
+    'assets/PS5ProEnhancedMarvelsSpiderMan2.mp4',
+    'assets/GodofWarRagnarökPS5PS4.mp4'
   ];
   @override
   Widget build(BuildContext context) {
@@ -35,27 +39,26 @@ class _VideoGalleryScreenState extends State<VideoGalleryScreen> {
         elevation: 0,
         centerTitle: true,
       ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.white,
-              Color(0xFFF5F5F5),
-            ],
-          ),
-        ),
-        child: ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: videoUrls.length,
-          itemBuilder: (context, index) {
-            return FadeInUp(
-                duration: const Duration(milliseconds: 500),
-                delay: Duration(milliseconds: 100 * index),
-                child: VideoCard(videoUrl: videoUrls[index]));
-          },
-        ),
+      body: FutureBuilder(
+        future: videoUrls.isEmpty ? _isarService.getAllVideos() : null,
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            return ListView.builder(
+              itemCount: snapshot.data!.length,
+              itemBuilder: (context, index) {
+                return FadeInDown(
+                  duration: const Duration(milliseconds: 500),
+                  delay: Duration(milliseconds: 100 * index),
+                  child: VideoCard(
+                    video: snapshot.data![index],
+                    isarService: _isarService,
+                  ),
+                );
+              },
+            );
+          }
+          return const Center(child: CircularProgressIndicator());
+        },
       ),
     );
   }

@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:video_player_flutter/CustomVideoPlayerScreen.dart';
+import 'package:animate_do/animate_do.dart';
+import 'package:video_player_flutter/domain/VideoModel.dart';
+import 'package:video_player_flutter/services/isar_service.dart';
 
 class VideoCard extends StatefulWidget {
-  final String videoUrl;
+  final VideoModel video;
+  final IsarService isarService;
 
-  const VideoCard({super.key, required this.videoUrl});
+  const VideoCard({
+    super.key,
+    required this.video,
+    required this.isarService,
+  });
 
   @override
   State<VideoCard> createState() => _VideoCardState();
@@ -19,10 +27,17 @@ class _VideoCardState extends State<VideoCard> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.asset(widget.videoUrl)
+    _initializeVideo();
+  }
+
+  Future<void> _initializeVideo() async {
+    _controller = VideoPlayerController.asset(widget.video.videoUrl)
       ..initialize().then((_) {
         setState(() {
           _isInitialized = true;
+          // Actualizar la duración en la base de datos.
+          widget.video.duration = _controller.value.duration.inSeconds;
+          widget.isarService.saveVideo(widget.video);
         });
       });
   }
@@ -36,96 +51,126 @@ class _VideoCardState extends State<VideoCard> {
   @override
   Widget build(BuildContext context) {
     final textStyle = Theme.of(context);
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Colors.white, Color(0xFFF8F8F8)],
-            )),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            MouseRegion(
-              onEnter: (_) => _onHover(true),
-              onExit: (_) => _onHover(false),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
+    return FadeInDown(
+      duration: const Duration(milliseconds: 500),
+      delay: const Duration(milliseconds: 100),
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: FadeInDownBig(
+          child: Container(
+            decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Colors.white, Color(0xFFF8F8F8)],
+                )),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                IconButton(
+                  onPressed: () async {
+                    await widget.isarService.toggleFavorite(widget.video.id);
+                    setState(() {});
+                  },
+                  icon: Icon(
+                    widget.video.isFavorite
+                        ? Icons.favorite
+                        : Icons.favorite_border,
+                    color: widget.video.isFavorite ? Colors.red : Colors.grey,
+                  ),
                 ),
-                child: AspectRatio(
-                  aspectRatio: 16 / 9,
-                  child: _isInitialized
-                      ? VideoPlayer(_controller)
-                      : const Center(
-                          child: CircularProgressIndicator(),
+                MouseRegion(
+                  onEnter: (_) => _onHover(true),
+                  onExit: (_) => _onHover(false),
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(12),
+                    ),
+                    child: AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: _isInitialized
+                          ? VideoPlayer(_controller)
+                          : const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CustomVideoPlayerScreen(
+                            controller: _controller,
+                            videoAsset: widget.video.videoUrl,
+                          ),
                         ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CustomVideoPlayerScreen(
-                        controller: _controller,
-                        videoAsset: widget.videoUrl,
-                      ),
-                    ),
-                  );
-                },
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Video ${widget.videoUrl.split('/').last}',
-                      style: textStyle.textTheme.bodyLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Duración: ${_formatDuration(_controller.value.duration)}',
-                      style: textStyle.textTheme.bodyMedium,
-                    ),
-                    const SizedBox(
-                      height: 16,
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CustomVideoPlayerScreen(
-                              controller: _controller,
-                              videoAsset: widget.videoUrl,
+                      );
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        FadeIn(
+                          child: Text(
+                            'Video ${widget.video.videoUrl.split('/').last}',
+                            style: textStyle.textTheme.bodyLarge,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        FadeIn(
+                          child: Text(
+                            'Duración: ${_formatDuration(_controller.value.duration)}',
+                            style: textStyle.textTheme.bodyMedium,
+                          ),
+                        ),
+                        const SizedBox(
+                          height: 16,
+                        ),
+                        ElasticInLeft(
+                          duration: const Duration(milliseconds: 500),
+                          delay: const Duration(milliseconds: 100),
+                          curve: Curves.bounceInOut,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CustomVideoPlayerScreen(
+                                    controller: _controller,
+                                    videoAsset: widget.video.videoUrl,
+                                  ),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Reproducir',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: Text(
-                        'Reproducir',
-                        style: textStyle.textTheme.bodySmall,
-                      ),
-                    )
-                  ],
+                        )
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
